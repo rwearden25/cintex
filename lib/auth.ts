@@ -22,7 +22,8 @@ export async function createSession(payload: SessionPayload) {
     .setExpirationTime("7d")
     .sign(getSecret());
 
-  cookies().set(COOKIE_NAME, token, {
+  const jar = await cookies(); // ✅ Next 15: cookies() is async
+  jar.set(COOKIE_NAME, token, {
     httpOnly: true,
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
@@ -31,12 +32,21 @@ export async function createSession(payload: SessionPayload) {
 }
 
 export async function destroySession() {
-  cookies().set(COOKIE_NAME, "", { httpOnly: true, path: "/", maxAge: 0 });
+  const jar = await cookies(); // ✅
+  jar.set(COOKIE_NAME, "", {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+    maxAge: 0,
+  });
 }
 
 export async function getSession(): Promise<SessionPayload | null> {
-  const token = cookies().get(COOKIE_NAME)?.value;
+  const jar = await cookies(); // ✅
+  const token = jar.get(COOKIE_NAME)?.value;
   if (!token) return null;
+
   try {
     const { payload } = await jwtVerify(token, getSecret());
     return payload as any;
